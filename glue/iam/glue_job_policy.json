@@ -1,0 +1,42 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListLakeBucket",
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket", "s3:GetBucketLocation"],
+      "Resource": "arn:aws:s3:::<BUCKET>"
+    },
+    {
+      "Sid": "ReadRawAndCode",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject"],
+      "Resource": [
+        "arn:aws:s3:::<BUCKET>/raw/*",
+        "arn:aws:s3:::<BUCKET>/glue/scripts/*",
+        "arn:aws:s3:::<BUCKET>/glue/libs/*"
+      ]
+    },
+    {
+      "Sid": "WriteSilverQuarantineTemp",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::<BUCKET>/silver/*",
+        "arn:aws:s3:::<BUCKET>/quarantine/*",
+        "arn:aws:s3:::<BUCKET>/glue/temp/*"
+      ]
+    },
+    {
+      "Sid": "GlueLogsAndMetrics",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "cloudwatch:PutMetricData"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

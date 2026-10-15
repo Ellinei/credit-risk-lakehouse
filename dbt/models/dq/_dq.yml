@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: dq_orphan_report
+    description: >
+      Orphan counts per foreign key relationship, refreshed every run. Orphans are kept
+      and mapped to the unknown client member; see the README for the policy.
+    data_tests:
+      - unique_combination:
+          arguments:
+            combination: [child_table, parent_table, foreign_key]

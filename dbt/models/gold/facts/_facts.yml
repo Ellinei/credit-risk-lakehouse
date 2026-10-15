@@ -1,0 +1,102 @@
+version: 2
+
+models:
+  - name: fact_loan_application
+    description: One row per current loan application. TARGET is the default label (train rows only).
+    columns:
+      - name: sk_id_curr
+        data_tests: [unique, not_null]
+      - &client_fk
+        name: client_sk
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_client')
+                field: client_sk
+      - name: contract_type_sk
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_contract_type')
+                field: contract_type_sk
+
+  - name: fact_bureau_credit
+    description: One row per credit reported by the Credit Bureau.
+    columns:
+      - name: sk_id_bureau
+        data_tests: [unique, not_null]
+      - *client_fk
+      - name: credit_type_sk
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_credit_type')
+                field: credit_type_sk
+      - &dpd_bucket
+        name: dpd_bucket
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['DPD 0', 'DPD 1-30', 'DPD 31-60', 'DPD 61-90', 'DPD 90+']
+
+  - name: fact_bureau_balance_monthly
+    description: One row per bureau credit per month, with the bureau STATUS mapped to a DPD bucket.
+    data_tests:
+      - unique_combination:
+          arguments:
+            combination: [sk_id_bureau, months_balance]
+    columns:
+      - *client_fk
+      - name: dpd_bucket
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['DPD 0', 'DPD 1-30', 'DPD 31-60', 'DPD 61-90', 'DPD 90+', 'Closed', 'Unknown']
+
+  - name: fact_previous_application
+    description: One row per previous Home Credit application.
+    columns:
+      - name: sk_id_prev
+        data_tests: [unique, not_null]
+      - *client_fk
+      - name: contract_type_sk
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_contract_type')
+                field: contract_type_sk
+      - name: application_status_sk
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_application_status')
+                field: application_status_sk
+
+  - name: fact_installment_payment
+    description: One row per installment payment event.
+    columns:
+      - name: record_hash
+        data_tests: [unique, not_null]
+      - *client_fk
+      - *dpd_bucket
+
+  - name: fact_pos_cash_monthly
+    description: One row per POS or cash loan per month.
+    data_tests:
+      - unique_combination:
+          arguments:
+            combination: [sk_id_prev, months_balance]
+    columns:
+      - *client_fk
+      - *dpd_bucket
+
+  - name: fact_credit_card_monthly
+    description: One row per credit card account per month.
+    data_tests:
+      - unique_combination:
+          arguments:
+            combination: [sk_id_prev, months_balance]
+    columns:
+      - *client_fk
+      - *dpd_bucket

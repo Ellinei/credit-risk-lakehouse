@@ -1,0 +1,21 @@
+snapshots:
+  - name: snap_client
+    description: >
+      SCD Type 2 history of client attributes. The source data never changes a client,
+      so the replayer's --resend-updates option re-sends some clients with a new income
+      and family status (synthetic, documented in the README) to give this snapshot
+      real changes to record.
+    relation: ref('stg_application')
+    config:
+      unique_key: sk_id_curr
+      strategy: check
+      check_cols:
+        - code_gender
+        - amt_income_total
+        - name_income_type
+        - name_education_type
+        - name_family_status
+        - name_housing_type
+        - occupation_type
+        - cnt_children
+      hard_deletes: ignore

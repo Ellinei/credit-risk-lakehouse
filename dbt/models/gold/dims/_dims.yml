@@ -1,0 +1,50 @@
+version: 2
+
+models:
+  - name: dim_client
+    description: Conformed client dimension, SCD Type 2 (one row per client version) plus an unknown member.
+    columns:
+      - name: client_sk
+        data_tests: [unique, not_null]
+      - name: gender
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['M', 'F']
+      - name: age_band
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['20-29', '30-39', '40-49', '50-59', '60+']
+      - name: income_band
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['under 100k', '100k-150k', '150k-200k', '200k-300k', '300k+']
+    data_tests:
+      - unique_combination:
+          arguments:
+            combination: [sk_id_curr, valid_from]
+
+  - name: dim_contract_type
+    description: Conformed contract type, shared by fact_loan_application and fact_previous_application.
+    columns:
+      - name: contract_type_sk
+        data_tests: [unique, not_null]
+      - name: contract_type
+        data_tests: [unique, not_null]
+
+  - name: dim_credit_type
+    columns:
+      - name: credit_type_sk
+        data_tests: [unique, not_null]
+
+  - name: dim_application_status
+    columns:
+      - name: application_status_sk
+        data_tests: [unique, not_null]
+      - name: application_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Approved', 'Refused', 'Canceled', 'Unused offer', 'Unknown']

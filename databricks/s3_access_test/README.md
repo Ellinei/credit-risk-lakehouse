@@ -27,7 +27,7 @@ Time needed: about 20 minutes. Cost: zero (one small file in S3).
 Open the SQL editor in Databricks and run the Step 0 block of `probe.sql`.
 
 - `CREATE CATALOG` works: keep `DATABRICKS_CATALOG=credit_risk`.
-- It fails: set `DATABRICKS_CATALOG=workspace` in `.env` and pass `--vars '{catalog: workspace}'` to dbt (the bundle has a `catalog` variable for this). Replace `credit_risk` with `workspace` in the rest of `probe.sql`.
+- It fails: use the built-in `workspace` catalog. Set `DATABRICKS_CATALOG=workspace` in `.env` (read by the local dbt profile) and deploy the bundle with `--var catalog=workspace` (the Databricks job passes it to dbt as the target catalog). Replace `credit_risk` with `workspace` in the rest of `probe.sql`.
 
 ### 1. Put a probe file in the bucket
 

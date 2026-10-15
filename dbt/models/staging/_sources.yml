@@ -1,0 +1,73 @@
+version: 2
+
+sources:
+  - name: silver
+    description: >
+      Glue's silver Parquet loaded into Delta by the load_silver macro. One table per
+      source file, typed and cleaned by Glue, partitioned by ingest_date. A key can
+      appear in several ingest_dates (re-sent records); staging keeps the newest.
+    database: "{{ target.database }}"
+    schema: silver
+    config:
+      loaded_at_field: "cast(ingest_date as timestamp)"
+      # Warn only: backfills load old ingest_dates on purpose.
+      freshness:
+        warn_after: {count: 2, period: day}
+    tables:
+      - name: application_train
+        data_tests:
+          - unique_combination:
+              arguments:
+                combination: [sk_id_curr, ingest_date]
+              config:
+                severity: warn
+      - name: application_test
+        data_tests:
+          - unique_combination:
+              arguments:
+                combination: [sk_id_curr, ingest_date]
+              config:
+                severity: warn
+      - name: bureau
+        data_tests:
+          - unique_combination:
+              arguments:
+                combination: [sk_id_bureau, ingest_date]
+              config:
+                severity: warn
+      - name: bureau_balance
+        data_tests:
+          - unique_combination:
+              arguments:
+                combination: [sk_id_bureau, months_balance, ingest_date]
+              config:
+                severity: warn
+      - name: previous_application
+        data_tests:
+          - unique_combination:
+              arguments:
+                combination: [sk_id_prev, ingest_date]
+              config:
+                severity: warn
+      - name: pos_cash_balance
+        description: >
+          (sk_id_prev, months_balance) is assumed unique per delivery. The warn-level test
+          checks that assumption on real data; staging keeps one row per pair either way.
+        data_tests:
+          - unique_combination:
+              arguments:
+                combination: [sk_id_prev, months_balance, ingest_date]
+              config:
+                severity: warn
+      - name: credit_card_balance
+        data_tests:
+          - unique_combination:
+              arguments:
+                combination: [sk_id_prev, months_balance, ingest_date]
+              config:
+                severity: warn
+      - name: installments_payments
+        description: >
+          No natural key. Glue's record_hash (SHA-256 of all business columns) is the
+          key, so rows that are identical in every column collapse into one. Documented
+          as a deliberate policy in the README.

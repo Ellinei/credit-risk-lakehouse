@@ -1,0 +1,58 @@
+name: credit_risk
+version: "0.1.0"
+config-version: 2
+profile: credit_risk
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Where Glue's silver Parquet is read from. Overridden per run by the Databricks job:
+  #   external_location mode: s3://<bucket>/silver
+  #   volume mode:            /Volumes/<catalog>/landing/silver
+  silver_root: "/Volumes/credit_risk/landing/silver"
+  silver_tables:
+    - application_train
+    - application_test
+    - bureau
+    - bureau_balance
+    - previous_application
+    - pos_cash_balance
+    - credit_card_balance
+    - installments_payments
+  # dq_orphan_report rows above this percentage raise a warning.
+  orphan_warn_pct: 1.0
+
+# The catalog is the target's `catalog` (profile or Databricks job setting), so every
+# model, the silver tables and the Volume live in one Unity Catalog catalog.
+models:
+  credit_risk:
+    staging:
+      +schema: staging
+      +materialized: view
+    gold:
+      +schema: gold
+      dims:
+        +materialized: table
+      facts:
+        +materialized: incremental
+        +incremental_strategy: merge
+        +on_schema_change: append_new_columns
+    intermediate:
+      +schema: intermediate
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
+    dq:
+      +schema: dq
+      +materialized: table
+
+snapshots:
+  credit_risk:
+    +schema: snapshots

@@ -1,0 +1,12 @@
+# Dummy profile for `dbt parse` in CI. Parsing never opens a connection.
+credit_risk:
+  target: ci
+  outputs:
+    ci:
+      type: databricks
+      host: dummy.cloud.databricks.com
+      http_path: /sql/1.0/warehouses/dummy
+      token: dummy
+      catalog: credit_risk
+      schema: gold
+      threads: 1

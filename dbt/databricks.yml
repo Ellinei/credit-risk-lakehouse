@@ -1,0 +1,37 @@
+# Databricks Asset Bundle: the job that runs this dbt project on Free Edition serverless.
+#
+#   databricks bundle validate
+#   databricks bundle deploy                         # add --var catalog=workspace if needed
+#   databricks bundle run credit_risk_dbt --params ingest_date=2026-10-01
+#
+# Airflow triggers the same job with DatabricksRunNowOperator(job_name="credit_risk_dbt").
+bundle:
+  name: credit_risk_lakehouse
+
+include:
+  - resources/*.yml
+
+sync:
+  exclude:
+    - target/
+    - logs/
+    - dbt_packages/
+    - ci/
+
+variables:
+  warehouse_id:
+    description: SQL warehouse that runs the dbt SQL (Free Edition has one, 2X-Small).
+    lookup:
+      warehouse: "Serverless Starter Warehouse"
+  catalog:
+    description: Unity Catalog catalog for every object. Use "workspace" if CREATE CATALOG is not allowed.
+    default: credit_risk
+  silver_root:
+    description: s3://<bucket>/silver (external location mode) or /Volumes/<catalog>/landing/silver (Volume mode).
+    default: /Volumes/credit_risk/landing/silver
+  dbt_databricks_version:
+    default: "1.12.7"
+
+targets:
+  free:
+    default: true

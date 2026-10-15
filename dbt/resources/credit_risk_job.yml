@@ -1,0 +1,36 @@
+resources:
+  jobs:
+    credit_risk_dbt:
+      name: credit_risk_dbt
+      description: >
+        Load one ingest_date of Glue's silver Parquet into Delta, then dbt build
+        (staging, SCD2 snapshot, gold dims and facts, marts, tests).
+      # Glue bookmarks and the dbt watermarks assume one run at a time.
+      max_concurrent_runs: 1
+      parameters:
+        - name: ingest_date
+          default: ""
+        - name: silver_root
+          default: ${var.silver_root}
+      environments:
+        - environment_key: dbt
+          spec:
+            environment_version: "2"
+            dependencies:
+              - dbt-databricks==${var.dbt_databricks_version}
+      tasks:
+        - task_key: load_and_build
+          environment_key: dbt
+          dbt_task:
+            project_directory: ../
+            warehouse_id: ${var.warehouse_id}
+            catalog: ${var.catalog}
+            schema: gold
+            commands:
+              # {{job.parameters.*}} is filled in by Databricks before the command runs.
+              - >-
+                dbt run-operation load_silver --args
+                '{"ingest_date": "{{job.parameters.ingest_date}}",
+                "silver_root": "{{job.parameters.silver_root}}"}'
+              - dbt source freshness
+              - dbt build

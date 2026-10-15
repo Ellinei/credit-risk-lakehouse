@@ -1,0 +1,20 @@
+[project]
+name = "credit-risk-lakehouse"
+version = "0.1.0"
+description = "Home Credit default risk lakehouse: S3 + AWS Glue (PySpark) to silver, Databricks + dbt to gold, Airflow orchestration."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = [".", "glue"]
+testpaths = ["replayer/tests", "glue/tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["dbt/target", "dbt/dbt_packages", "airflow/logs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["replayer", "silver_lib"]

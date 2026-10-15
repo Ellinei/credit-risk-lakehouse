@@ -1,0 +1,58 @@
+# Source data (download from Kaggle, never commit)
+data/
+*.csv
+!replayer/tests/fixtures/**/*.csv
+!glue/tests/fixtures/**/*.csv
+!dbt/seeds/*.csv
+
+# Local outputs from the replayer and the Glue smoke test
+out/
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+profiles.yml
+!dbt/ci/profiles.yml
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+*.zip
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/.user.yml
+
+# Databricks bundle state
+.databricks/
+
+# Airflow
+airflow/logs/
+airflow/plugins/
+
+# Terraform (stretch)
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

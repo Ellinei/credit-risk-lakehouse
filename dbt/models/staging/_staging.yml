@@ -1,0 +1,87 @@
+version: 2
+
+models:
+  - name: stg_application
+    description: One row per client application (train and test stacked), newest version per client.
+    columns:
+      - name: sk_id_curr
+        data_tests: [unique, not_null]
+      - name: target
+        description: 1 = client had payment difficulties. Null for application_test rows.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+                quote: false
+      - name: code_gender
+        description: M or F. Glue turns the source's 'XNA' into null.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['M', 'F']
+      - name: name_contract_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Cash loans', 'Revolving loans']
+      - name: days_employed
+        description: Days employed before the application (negative). Null when the source had the 365243 sentinel.
+      - name: days_employed_is_sentinel
+        description: True when the source said 365243 (pensioners and unemployed applicants).
+        data_tests: [not_null]
+
+  - name: stg_bureau
+    columns:
+      - name: sk_id_bureau
+        data_tests: [unique, not_null]
+      - name: sk_id_curr
+        data_tests: [not_null]
+      - name: credit_active
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Active', 'Closed', 'Sold', 'Bad debt']
+
+  - name: stg_bureau_balance
+    data_tests:
+      - unique_combination:
+          arguments:
+            combination: [sk_id_bureau, months_balance]
+    columns:
+      - name: status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['0', '1', '2', '3', '4', '5', 'C', 'X']
+
+  - name: stg_previous_application
+    columns:
+      - name: sk_id_prev
+        data_tests: [unique, not_null]
+      - name: sk_id_curr
+        data_tests: [not_null]
+      - name: name_contract_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Approved', 'Refused', 'Canceled', 'Unused offer']
+
+  - name: stg_pos_cash_balance
+    data_tests:
+      - unique_combination:
+          arguments:
+            combination: [sk_id_prev, months_balance]
+
+  - name: stg_credit_card_balance
+    data_tests:
+      - unique_combination:
+          arguments:
+            combination: [sk_id_prev, months_balance]
+
+  - name: stg_installments_payments
+    columns:
+      - name: record_hash
+        data_tests: [unique, not_null]
+      - name: days_past_due
+        description: Days the payment came after the due day (0 when on time, null when unpaid).

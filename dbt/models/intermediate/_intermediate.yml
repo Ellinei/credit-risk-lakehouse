@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: int_client_bureau_summary
+    description: Per-client aggregates of Credit Bureau credits and monthly bureau status.
+    columns:
+      - name: sk_id_curr
+        data_tests: [unique, not_null]
+
+  - name: int_client_previous_summary
+    description: Per-client counts and approval rate of previous Home Credit applications.
+    columns:
+      - name: sk_id_curr
+        data_tests: [unique, not_null]
+
+  - name: int_client_repayment_summary
+    description: Per-client repayment behaviour from installments, POS cash and credit card months.
+    columns:
+      - name: sk_id_curr
+        data_tests: [unique, not_null]

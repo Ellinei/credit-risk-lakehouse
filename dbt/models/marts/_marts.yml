@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: mart_delinquency_buckets
+    description: Record and client counts per DPD bucket, for installment payments and POS cash months.
+    data_tests:
+      - unique_combination:
+          arguments:
+            combination: [source, dpd_bucket]
+    columns:
+      - name: dpd_bucket
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['DPD 0', 'DPD 1-30', 'DPD 31-60', 'DPD 61-90', 'DPD 90+', 'Unpaid']
+
+  - name: mart_default_rate_by_segment
+    description: Default rate by contract type, income band and age band (train rows only).
+    data_tests:
+      - unique_combination:
+          arguments:
+            combination: [contract_type, income_band, age_band]
+    columns:
+      - name: default_rate
+        description: Share of applications with TARGET = 1.
+
+  - name: mart_applicant_features
+    description: One row per applicant with bureau and repayment aggregates, ready for a scoring model.
+    columns:
+      - name: sk_id_curr
+        data_tests: [unique, not_null]

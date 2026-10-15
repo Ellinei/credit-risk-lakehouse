@@ -1,8 +1,7 @@
 # Source data (download from Kaggle, never commit)
 data/
 *.csv
-!replayer/tests/fixtures/**/*.csv
-!glue/tests/fixtures/**/*.csv
+!tests/fixtures/**/*.csv
 !dbt/seeds/*.csv
 
 # Local outputs from the replayer and the Glue smoke test

@@ -1,0 +1,8 @@
+SK_ID_CURR,TARGET,NAME_CONTRACT_TYPE,CODE_GENDER,FLAG_OWN_CAR,FLAG_OWN_REALTY,CNT_CHILDREN,AMT_INCOME_TOTAL,AMT_CREDIT,AMT_ANNUITY,AMT_GOODS_PRICE,NAME_INCOME_TYPE,NAME_EDUCATION_TYPE,NAME_FAMILY_STATUS,NAME_HOUSING_TYPE,DAYS_BIRTH,DAYS_EMPLOYED,OCCUPATION_TYPE,CNT_FAM_MEMBERS,ORGANIZATION_TYPE,EXT_SOURCE_2,FLAG_DOCUMENT_3
+100002,1,Cash loans,M,N,Y,0,202500.0,406597.5,24700.5,351000.0,Working,Secondary / secondary special,Single / not married,House / apartment,-9461,-637,Laborers,1.0,Business Entity Type 3,0.2629485927471776,1
+100003,0,Cash loans,F,N,N,0,270000.0,1293502.5,35698.5,1129500.0,State servant,Higher education,Married,House / apartment,-16765,-1188,Core staff,2.0,School,0.6222457752555098,1
+100004,0,Revolving loans,M,Y,Y,0,67500.0,135000.0,6750.0,135000.0,Working,Secondary / secondary special,Single / not married,House / apartment,-19046,-225,Laborers,1.0,Government,0.5559120833904428,0
+100006,0,Cash loans,F,N,Y,0,135000.0,312682.5,29686.5,297000.0,Pensioner,Secondary / secondary special,Civil marriage,House / apartment,-19005,365243,,2.0,XNA,0.6504416904483531,1
+100007,0,Cash loans,XNA,N,Y,0,121500.0,513000.0,21865.5,513000.0,Working,Secondary / secondary special,Single / not married,House / apartment,-19932,-3038,Core staff,1.0,Religion,0.3227382869704046,0
+100008,0,Cash loans,M,N,Y,0,abc,490495.5,27517.5,454500.0,State servant,Secondary / secondary special,Married,House / apartment,-16941,-1588,Laborers,2.0,Other,0.3542247319929012,1
+100009,1,Cash loans,F,Y,Y,1,171000.0,1560726.0,41301.0,1395000.0,Commercial associate,Higher education,Married,House / apartment,-13778,-3130,Accountants,3.0,Business Entity Type 3,0.7239998516953141,1

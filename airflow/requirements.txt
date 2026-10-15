@@ -1,0 +1,8 @@
+# Installed on top of apache/airflow:3.3.2-python3.12 with Airflow's own constraints file:
+#   pip install --constraint https://raw.githubusercontent.com/apache/airflow/constraints-3.3.2/constraints-3.12.txt -r requirements.txt
+# Provider versions match that constraints file. duckdb and databricks-sdk are not in it,
+# so they are pinned here directly.
+apache-airflow-providers-amazon==9.36.0
+apache-airflow-providers-databricks==7.20.0
+duckdb==1.5.6
+databricks-sdk==0.117.0

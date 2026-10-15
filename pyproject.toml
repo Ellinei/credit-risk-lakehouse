@@ -5,8 +5,8 @@ description = "Home Credit default risk lakehouse: S3 + AWS Glue (PySpark) to si
 requires-python = ">=3.11"
 
 [tool.pytest.ini_options]
-pythonpath = [".", "glue"]
-testpaths = ["replayer/tests", "glue/tests"]
+pythonpath = [".", "glue", "airflow/dags"]
+testpaths = ["replayer/tests", "glue/tests", "airflow/tests"]
 
 [tool.ruff]
 line-length = 100
@@ -17,4 +17,4 @@ extend-exclude = ["dbt/target", "dbt/dbt_packages", "airflow/logs"]
 select = ["E", "F", "I"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["replayer", "silver_lib"]
+known-first-party = ["replayer", "silver_lib", "credit_risk_lib"]

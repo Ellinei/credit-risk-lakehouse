@@ -1,0 +1,101 @@
+# Minimal local Airflow 3: Postgres metadata DB, LocalExecutor, no Celery or Redis.
+#
+#   cd airflow
+#   docker compose --env-file ../.env up -d --build
+#   UI: http://localhost:8080 (local dev auth: everyone is admin, no login)
+#
+# --env-file ../.env makes the repo's .env available for ${...} below; env_file passes
+# the same variables into the containers (the DAG reads LAKE_BUCKET, GLUE_JOB_NAME, ...).
+
+x-airflow-common: &airflow-common
+  build: .
+  image: credit-risk-airflow:3.3.2
+  env_file:
+    - path: ../.env
+      required: false
+  environment: &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "true"
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://airflow-apiserver:8080/execution/"
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: "postgresql+psycopg2://airflow:airflow@postgres/airflow"
+    AIRFLOW__API_AUTH__JWT_SECRET: "${AIRFLOW_JWT_SECRET:-local-dev-only-change-me}"
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: "true"
+    # /opt/airflow on the path so the DAG can `import replayer` from the mounted repo folder.
+    PYTHONPATH: "/opt/airflow"
+    AWS_DEFAULT_REGION: "${AWS_REGION:-ap-southeast-1}"
+    # Connections as JSON env vars (nothing stored in the metadata DB).
+    AIRFLOW_CONN_AWS_DEFAULT: '{"conn_type": "aws", "extra": {"region_name": "${AWS_REGION:-ap-southeast-1}"}}'
+    AIRFLOW_CONN_DATABRICKS_DEFAULT: '{"conn_type": "databricks", "host": "${DATABRICKS_HOST:-}", "password": "${DATABRICKS_TOKEN:-}"}'
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ../replayer:/opt/airflow/replayer:ro
+    # Kaggle CSVs in ../data/raw; the replayer writes a Parquet cache to ../data/cache.
+    - ../data:/opt/airflow/data
+    # boto3 reads credentials for AWS_PROFILE from here.
+    - ${AWS_CONFIG_DIR:-~/.aws}:/home/airflow/.aws:ro
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on: &airflow-common-depends-on
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  airflow-init:
+    <<: *airflow-common
+    command: ["bash", "-c", "airflow db migrate"]
+    restart: "no"
+
+  airflow-apiserver:
+    <<: *airflow-common
+    command: api-server
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    command: scheduler
+    restart: unless-stopped
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    restart: unless-stopped
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-db:

@@ -25,8 +25,9 @@ vars:
     - pos_cash_balance
     - credit_card_balance
     - installments_payments
-  # dq_orphan_report rows above this percentage raise a warning.
-  orphan_warn_pct: 1.0
+  # Warn when the latest load's orphan rate is more than this many percentage points
+  # away from the relationship's expected rate (see dq_orphan_report).
+  orphan_warn_margin_pct: 2.0
 
 # The catalog is the target's `catalog` (profile or Databricks job setting), so every
 # model, the silver tables and the Volume live in one Unity Catalog catalog.

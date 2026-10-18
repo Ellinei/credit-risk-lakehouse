@@ -117,14 +117,14 @@ Either way, the dbt macro `load_silver` runs `INSERT INTO silver.<table> REPLACE
 | `DAYS_EMPLOYED = 365243` means pensioner or unemployed, not 1,000 years of tenure | Glue | Nulled, `days_employed_is_sentinel = true`. Same for five `DAYS_*` columns in previous_application. Singular dbt test plus unit test |
 | `CODE_GENDER = 'XNA'` | Glue | Nulled; dbt `accepted_values` is just M and F |
 | Unparseable values, missing keys | Glue | Quarantined with reasons; 5% circuit breaker |
-| Orphaned foreign keys (for example a bureau row whose client has no application) | dbt | **Kept, not dropped.** Facts point at the unknown client member (`client_sk = '-1'`) so totals still add up. `dq_orphan_report` counts orphans per relationship every run; a warn-level test fires above 1% |
+| Orphaned foreign keys (for example a bureau row whose client has no application) | dbt | **Kept, not dropped.** Facts point at the unknown client member (`client_sk = '-1'`) so totals still add up. `dq_orphan_report` counts orphans per relationship every run; a warn-level test fires when the latest load is more than 2 points away from the relationship's expected rate |
 | Installments have no natural key | Glue + dbt | `record_hash` (SHA-256 of all business columns) is the key. Rows identical in every column collapse into one; this is a deliberate policy |
 | Duplicate keys within one delivery | dbt | Warn-level `unique_combination` tests on every silver source |
 | Freshness | dbt | `dbt source freshness` warns when the newest `ingest_date` is over 2 days old (warn only, because backfills load old days) |
 
 Plus `unique`, `not_null`, `relationships` (every fact's `client_sk` to `dim_client`, and the other dimension keys) and `accepted_values` tests: 93 data tests in total.
 
-**Orphan rates in the real data.** Two relationships are orphaned in the source itself, so the 1% warning fires on every run:
+**Orphan rates in the real data.** Two relationships are orphaned in the source itself:
 
 | Relationship | Full dataset (DuckDB over the CSVs) | First 3 replayed days (`dq_orphan_report`) |
 |---|---|---|
@@ -132,6 +132,8 @@ Plus `unique`, `not_null`, `relationships` (every fact's `client_sk` to `dim_cli
 | installments_payments to previous_application (`sk_id_prev`) | 1,250,826 of 13.6M rows (9.2%) | 21,076 of 224,373 (9.4%) |
 
 The other five relationships (every child table to its application) had no orphans in the replayed days. For bureau_balance the replayed rate matching the full dataset also shows that the `SK_ID_BUREAU` modulo rule spreads parentless rows evenly across days instead of piling them into one. Installments are sliced by client range like every other table, so their orphans simply arrive with their client.
+
+The first version of the check warned on any relationship above a flat 1%, so it fired on every run and stopped meaning anything. Now each relationship has an expected rate (the full dataset figure, 0% for the other five), and `assert_orphan_rate_near_baseline` warns only when the latest load (the rows with the newest `_loaded_at`, which also covers a backfilled day) is more than `orphan_warn_margin_pct` (2) points away from it. On days 1 and 3 the daily rates were within 1 point of the expected rates.
 
 ### Orchestration
 
@@ -201,7 +203,7 @@ dbt build
 | DAG integrity | pytest inside the Airflow image; `plan_run` also run with `airflow tasks test` | pass |
 | dbt | `dbt parse` (no connection) | passes: 25 models, 1 snapshot, 8 sources, 93 tests |
 | Glue job on the real data | Local `spark-submit` in the Glue 5 container on 3 replayed days (about 980k rows), default 5% quarantine limit | passes in 1 min 40 s: 0 rows quarantined in all 8 tables, no column fell back to string, `DAYS_EMPLOYED` sentinel on about 18% of applicants |
-| dbt against Databricks | Local dbt against the Free Edition SQL warehouse, 3 days through the Volume path, one `load_silver` plus `dbt build` per day | passes every day: 118 PASS, 1 WARN (the orphan rate above), 0 errors, 2.5 to 3 min per build. After day 3: 6,000 clients in `fact_loan_application`, the 50 re-sent clients updated in place by MERGE, 50 closed versions in `snap_client`, every other fact equal to its silver row total |
+| dbt against Databricks | Local dbt against the Free Edition SQL warehouse, 3 days through the Volume path, one `load_silver` plus `dbt build` per day | passes every day: 118 PASS, 1 WARN (the old flat 1% orphan check; its replacement passes on day 3 and warns as intended when the margin is tightened to 0.5), 0 errors, 2.5 to 3 min per build. After day 3: 6,000 clients in `fact_loan_application`, the 50 re-sent clients updated in place by MERGE, 50 closed versions in `snap_client`, every other fact equal to its silver row total |
 | Databricks job (bundle) | `databricks bundle deploy` and `bundle run` | **not run yet** |
 | Cloud end to end | Glue on AWS, the Airflow DAG against real services | **not run yet** |
 

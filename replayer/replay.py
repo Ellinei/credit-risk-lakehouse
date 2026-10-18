@@ -91,7 +91,9 @@ def upload_partition(local_root: Path, bucket: str, prefix: str, partition: str)
     """Replace s3://bucket/prefix/<table>/<partition>/ with the local files."""
     import boto3
 
-    s3 = boto3.client("s3")
+    # AWS_REGION from .env, like deploy_glue_job.py. Without it boto3 takes the profile's
+    # region, which may not be a real S3 region (for example aws-global).
+    s3 = boto3.client("s3", region_name=os.getenv("AWS_REGION"))
     table_dirs = sorted(p for p in local_root.iterdir() if p.is_dir())
     for table_dir in table_dirs:
         key_prefix = f"{prefix}/{table_dir.name}/{partition}/"

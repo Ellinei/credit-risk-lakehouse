@@ -74,6 +74,21 @@ def test_rerun_replaces_stale_files():
     assert files.files[f"{ROOT}/bureau/ingest_date={DAY}/part-new.parquet"] == b"new"
 
 
+def test_local_directory_stands_in_for_the_bucket(tmp_path):
+    from scripts.push_local_silver import LocalS3
+
+    partition = tmp_path / "silver" / "bureau" / f"ingest_date={DAY}"
+    partition.mkdir(parents=True)
+    (partition / "part-0000.snappy.parquet").write_bytes(b"aaa")
+    (partition / "_SUCCESS").write_bytes(b"")
+    files = FakeFiles()
+    volume_sync.sync_partition(
+        LocalS3(), files, bucket=str(tmp_path), catalog="credit_risk",
+        ingest_date=DAY, tables=["bureau"],
+    )
+    assert files.files == {f"{ROOT}/bureau/ingest_date={DAY}/part-0000.snappy.parquet": b"aaa"}
+
+
 def test_table_without_files_that_day_is_empty_not_an_error():
     result = volume_sync.sync_partition(
         FakeS3({}), FakeFiles(), bucket="lake", catalog="credit_risk",

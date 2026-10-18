@@ -124,6 +124,15 @@ Either way, the dbt macro `load_silver` runs `INSERT INTO silver.<table> REPLACE
 
 Plus `unique`, `not_null`, `relationships` (every fact's `client_sk` to `dim_client`, and the other dimension keys) and `accepted_values` tests: 93 data tests in total.
 
+**Orphan rates in the real data.** Two relationships are orphaned in the source itself, so the 1% warning fires on every run:
+
+| Relationship | Full dataset (DuckDB over the CSVs) | First 3 replayed days (`dq_orphan_report`) |
+|---|---|---|
+| bureau_balance to bureau (`sk_id_bureau`) | 3,120,184 of 27.3M rows (11.4%) | 51,529 of 464,126 (11.1%) |
+| installments_payments to previous_application (`sk_id_prev`) | 1,250,826 of 13.6M rows (9.2%) | 21,076 of 224,373 (9.4%) |
+
+The other five relationships (every child table to its application) had no orphans in the replayed days. The replayed rates match the full dataset, which also shows that the replayer spreads orphans evenly across days instead of piling them into one.
+
 ### Orchestration
 
 `credit_risk_daily` runs one `ingest_date` per DAG run: plan the run, land the raw slice, run the Glue job, optionally sync to the Volume, then trigger the Databricks job. `max_active_runs=1` because bookmarks and watermarks expect days in order. Backfill a range with:
@@ -142,6 +151,8 @@ Trigger with `reprocess=true` to rebuild one day, or `land_slice=false` when the
 | 2026-10-15 | Glue stops at silver; modeling moved to dbt | One owner per responsibility; no duplicated Spark work |
 | 2026-10-15 | Glue 5.1 (Spark 3.5.6) | AWS default version at the time; Glue 6.0 was too new |
 | 2026-10-15 | Airflow 3 | Scheduler-managed backfills; the ecommerce repo already shows Airflow 2 |
+| 2026-10-19 | Lake bucket in `us-east-2` | `SELECT current_metastore()` shows the Free Edition workspace runs in AWS `us-east-2`. Keeping S3 in the same region avoids cross-region transfer, whichever way silver reaches Databricks |
+| 2026-10-19 | Test dbt on Databricks before any AWS run | The Volume path needs no AWS: a local `spark-submit` of the Glue job writes silver, `scripts/push_local_silver.py` uploads it with the same code the DAG uses, and dbt runs against the SQL warehouse. This tested the riskiest untested parts first |
 | _pending_ | `SILVER_ACCESS_MODE` | Result of the Free Edition S3 test. Fill in from `databricks/s3_access_test/README.md` |
 
 ## Running it
@@ -163,6 +174,22 @@ python -m replayer.replay --data-dir tests/fixtures/home_credit --ingest-date 20
     --clients-per-slice 3 --target local --out-dir out/landing
 ```
 
+Run the real data through Glue and dbt on Databricks without AWS (the Volume path). This needs the Kaggle CSVs in `data/raw/`, the `DATABRICKS_*` values in `.env` exported to the shell, and `dbt/profiles.yml` copied from the example:
+
+```bash
+# 1. Land one day and run the Glue job locally (same docker run as glue/tests/smoke/run_smoke.sh,
+#    with --raw_root, --silver_root and --quarantine_root under out/real/)
+python -m replayer.replay --ingest-date 2026-10-01 --cache-dir data/cache --out-dir out/real/landing
+
+# 2. Upload that day's silver into the Volume /Volumes/<catalog>/landing/silver
+python scripts/push_local_silver.py --silver-dir out/real/silver --ingest-date 2026-10-01
+
+# 3. Load it into Delta and build, as the Databricks job does (from dbt/)
+dbt run-operation load_silver --args '{"ingest_date": "2026-10-01"}'
+dbt source freshness
+dbt build
+```
+
 ## Testing
 
 | What | How | Status |
@@ -173,8 +200,10 @@ python -m replayer.replay --data-dir tests/fixtures/home_credit --ingest-date 20
 | Airflow run plan and Volume sync | `pytest airflow/tests` (fakes for S3 and the Files API) | pass |
 | DAG integrity | pytest inside the Airflow image; `plan_run` also run with `airflow tasks test` | pass |
 | dbt | `dbt parse` (no connection) | passes: 25 models, 1 snapshot, 8 sources, 93 tests |
-| dbt against Databricks | `dbt build` on a real workspace | **not run yet** |
-| Cloud end to end | Glue on AWS, the Databricks job, the Airflow DAG against real services | **not run yet** |
+| Glue job on the real data | Local `spark-submit` in the Glue 5 container on 3 replayed days (about 980k rows), default 5% quarantine limit | passes in 1 min 40 s: 0 rows quarantined in all 8 tables, no column fell back to string, `DAYS_EMPLOYED` sentinel on about 18% of applicants |
+| dbt against Databricks | Local dbt against the Free Edition SQL warehouse, 3 days through the Volume path, one `load_silver` plus `dbt build` per day | passes every day: 118 PASS, 1 WARN (the orphan rate above), 0 errors, 2.5 to 3 min per build. After day 3: 6,000 clients in `fact_loan_application`, the 50 re-sent clients updated in place by MERGE, 50 closed versions in `snap_client`, every other fact equal to its silver row total |
+| Databricks job (bundle) | `databricks bundle deploy` and `bundle run` | **not run yet** |
+| Cloud end to end | Glue on AWS, the Airflow DAG against real services | **not run yet** |
 
 ## Cost notes
 
@@ -191,7 +220,7 @@ A daily run therefore costs a few cents, almost all of it Glue.
 ## Known limitations
 
 - Arrivals are simulated, and the SCD2 changes come from the replayer's `--resend-updates`, not from the data.
-- The dbt models have only been parsed. `REPLACE WHERE`, `read_files` partition discovery, MERGE and the snapshot have not run against Databricks yet, so expect fixes on the first real `dbt build`.
+- dbt has run against Databricks only from a laptop, on 3 replayed days through the Volume. The Glue job on AWS, the S3 external location and the Airflow DAG have not run against real services yet.
 - It is not yet confirmed that Free Edition can run the job's serverless dbt task. If it cannot, run dbt from the Airflow container against the SQL warehouse instead.
 - An orphan fact keeps the unknown client even if the parent application arrives in a later delivery. Range slicing makes this rare, but nothing re-points those rows.
 - The local Glue image ships Spark 3.5.2 while Glue 5.1 runs Spark 3.5.6; the tests do not depend on the difference.

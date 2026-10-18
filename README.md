@@ -131,7 +131,7 @@ Plus `unique`, `not_null`, `relationships` (every fact's `client_sk` to `dim_cli
 | bureau_balance to bureau (`sk_id_bureau`) | 3,120,184 of 27.3M rows (11.4%) | 51,529 of 464,126 (11.1%) |
 | installments_payments to previous_application (`sk_id_prev`) | 1,250,826 of 13.6M rows (9.2%) | 21,076 of 224,373 (9.4%) |
 
-The other five relationships (every child table to its application) had no orphans in the replayed days. The replayed rates match the full dataset, which also shows that the replayer spreads orphans evenly across days instead of piling them into one.
+The other five relationships (every child table to its application) had no orphans in the replayed days. For bureau_balance the replayed rate matching the full dataset also shows that the `SK_ID_BUREAU` modulo rule spreads parentless rows evenly across days instead of piling them into one. Installments are sliced by client range like every other table, so their orphans simply arrive with their client.
 
 ### Orchestration
 

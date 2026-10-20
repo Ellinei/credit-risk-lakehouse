@@ -155,7 +155,7 @@ Trigger with `reprocess=true` to rebuild one day, or `land_slice=false` when the
 | 2026-10-15 | Airflow 3 | Scheduler-managed backfills; the ecommerce repo already shows Airflow 2 |
 | 2026-10-19 | Lake bucket in `us-east-2` | `SELECT current_metastore()` shows the Free Edition workspace runs in AWS `us-east-2`. Keeping S3 in the same region avoids cross-region transfer, whichever way silver reaches Databricks |
 | 2026-10-19 | Test dbt on Databricks before any AWS run | The Volume path needs no AWS: a local `spark-submit` of the Glue job writes silver, `scripts/push_local_silver.py` uploads it with the same code the DAG uses, and dbt runs against the SQL warehouse. This tested the riskiest untested parts first |
-| _pending_ | `SILVER_ACCESS_MODE` | Result of the Free Edition S3 test. Fill in from `databricks/s3_access_test/README.md` |
+| 2026-10-20 | `SILVER_ACCESS_MODE=external_location` | The Free Edition S3 test passed: a storage credential and external location on `s3://<bucket>/silver/` were created through the SDK, and `LIST` and `read_files` returned the probe rows. The Volume copy stays as the fallback |
 
 ## Running it
 
@@ -222,7 +222,7 @@ A daily run therefore costs a few cents, almost all of it Glue.
 ## Known limitations
 
 - Arrivals are simulated, and the SCD2 changes come from the replayer's `--resend-updates`, not from the data.
-- dbt has run against Databricks only from a laptop, on 3 replayed days through the Volume. The Glue job on AWS, the S3 external location and the Airflow DAG have not run against real services yet.
+- dbt has run against Databricks only from a laptop, on 3 replayed days through the Volume. The S3 external location has been tested with a small probe file only. The Glue job on AWS and the Airflow DAG have not run against real services yet.
 - It is not yet confirmed that Free Edition can run the job's serverless dbt task. If it cannot, run dbt from the Airflow container against the SQL warehouse instead.
 - An orphan fact keeps the unknown client even if the parent application arrives in a later delivery. Range slicing makes this rare, but nothing re-points those rows.
 - The local Glue image ships Spark 3.5.2 while Glue 5.1 runs Spark 3.5.6; the tests do not depend on the difference.

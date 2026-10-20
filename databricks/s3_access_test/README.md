@@ -77,15 +77,17 @@ Run the Volume block of `probe.sql` after uploading `bureau.csv` to the Volume i
 Fill this in, set `SILVER_ACCESS_MODE` in `.env`, and copy the outcome into the main README under "Decision log".
 
 ```
-Date tested:
-Catalog creation allowed (yes/no):
-Storage credential creation available (yes/no):
-External location created (yes/no):
-read_files on s3:// worked (yes/no):
-Volume fallback worked (yes/no):
-Error messages (verbatim):
-Chosen SILVER_ACCESS_MODE:
+Date tested: 2026-10-20
+Catalog creation allowed (yes/no): yes
+Storage credential creation available (yes/no): yes
+External location created (yes/no): yes
+read_files on s3:// worked (yes/no): yes
+Volume fallback worked (yes/no): yes
+Error messages (verbatim): none
+Chosen SILVER_ACCESS_MODE: external_location
 ```
+
+Notes: the test was run with the Databricks SDK instead of the UI. The credential was created with `skip_validation=True`, then the trust policy was updated with the real external ID and the validation call returned PASS for READ, LIST, WRITE, DELETE and PATH_EXISTS on the first try. The Unity Catalog IAM ARN returned by Databricks matched the one hardcoded in `trust_policy_initial.json`. `LIST` and `read_files` on `s3://<bucket>/silver/_probe/` returned the 7 probe rows. `LIST` on the Volume `/Volumes/credit_risk/landing/silver/` also worked. The probe file was deleted afterwards, and the IAM role, storage credential and external location were kept.
 
 ## Clean up
 

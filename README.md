@@ -156,6 +156,7 @@ Trigger with `reprocess=true` to rebuild one day, or `land_slice=false` when the
 | 2026-10-19 | Lake bucket in `us-east-2` | `SELECT current_metastore()` shows the Free Edition workspace runs in AWS `us-east-2`. Keeping S3 in the same region avoids cross-region transfer, whichever way silver reaches Databricks |
 | 2026-10-19 | Test dbt on Databricks before any AWS run | The Volume path needs no AWS: a local `spark-submit` of the Glue job writes silver, `scripts/push_local_silver.py` uploads it with the same code the DAG uses, and dbt runs against the SQL warehouse. This tested the riskiest untested parts first |
 | 2026-10-20 | `SILVER_ACCESS_MODE=external_location` | The Free Edition S3 test passed: a storage credential and external location on `s3://<bucket>/silver/` were created through the SDK, and `LIST` and `read_files` returned the probe rows. The Volume copy stays as the fallback |
+| 2026-10-20 | Run the Glue job in the local Glue 5 container against S3 | Managed Glue is blocked: the account is on the AWS Free account plan and `CreateJob` returns "Account ... is denied access". The same entrypoint runs with `spark-submit` in `public.ecr.aws/glue/aws-glue-libs:5` with `s3://` roots until the plan is upgraded. The Glue role and the job code are already deployed for that day |
 
 ## Running it
 
@@ -167,6 +168,8 @@ Prerequisites: Python 3.11+, Docker, an AWS account with the CLI configured, a D
 4. Run the S3 test in `databricks/s3_access_test/` and set `SILVER_ACCESS_MODE`.
 5. From `dbt/`: `databricks bundle deploy` (add `--var catalog=workspace` or `--var silver_root=s3://<bucket>/silver` as needed).
 6. From `airflow/`: `docker compose --env-file ../.env up -d --build`, open http://localhost:8080, and unpause `credit_risk_daily`, or trigger it with an `ingest_date`.
+
+To run the Glue job against S3 without managed Glue, land a day with `python -m replayer.replay --target s3 --bucket <bucket>`, then run the same `spark-submit` as the smoke test in the Glue 5 container with `--raw_root`, `--silver_root` and `--quarantine_root` set to `s3://<bucket>/...`, `--job-bookmark-option job-bookmark-disable` and `--reprocess_ingest_date <day>`. Pass `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` and `AWS_REGION` to `docker run` with `-e NAME` (the container cannot use an `aws login` profile). The `s3://` scheme worked in the image as it is.
 
 Try the replayer locally without any cloud:
 
@@ -204,8 +207,10 @@ dbt build
 | dbt | `dbt parse` (no connection) | passes: 25 models, 1 snapshot, 8 sources, 93 tests |
 | Glue job on the real data | Local `spark-submit` in the Glue 5 container on 3 replayed days (about 980k rows), default 5% quarantine limit | passes in 1 min 40 s: 0 rows quarantined in all 8 tables, no column fell back to string, `DAYS_EMPLOYED` sentinel on about 18% of applicants |
 | dbt against Databricks | Local dbt against the Free Edition SQL warehouse, 3 days through the Volume path, one `load_silver` plus `dbt build` per day | passes every day: 118 PASS, 1 WARN (the old flat 1% orphan check; its replacement passes on day 3 and warns as intended when the margin is tightened to 0.5), 0 errors, 2.5 to 3 min per build. After day 3: 6,000 clients in `fact_loan_application`, the 50 re-sent clients updated in place by MERGE, 50 closed versions in `snap_client`, every other fact equal to its silver row total |
+| Glue job against S3 (local container) | `spark-submit` of `bronze_to_silver.py` in the Glue 5 container with `s3://` raw, silver and quarantine roots, one `--reprocess_ingest_date` run per day (bookmarks off), days landed by `replayer --target s3` | passes for 3 days: 5 min 20 s to 6 min 30 s per run, about 980k rows, 0 rows quarantined, silver row counts equal to the earlier local run for all 8 tables and 3 days |
+| External location on real silver | `read_files('s3://<bucket>/silver/<table>/', format => 'parquet')` through the SQL warehouse | reads all 8 tables, `ingest_date` comes back as a partition column, counts match the local silver |
 | Databricks job (bundle) | `databricks bundle deploy` and `bundle run` | **not run yet** |
-| Cloud end to end | Glue on AWS, the Airflow DAG against real services | **not run yet** |
+| Cloud end to end | Managed Glue on AWS, the Airflow DAG against real services | **not run**: managed Glue is blocked by the AWS Free account plan, and the DAG has not run |
 
 ## Cost notes
 
@@ -222,7 +227,7 @@ A daily run therefore costs a few cents, almost all of it Glue.
 ## Known limitations
 
 - Arrivals are simulated, and the SCD2 changes come from the replayer's `--resend-updates`, not from the data.
-- dbt has run against Databricks only from a laptop, on 3 replayed days through the Volume. The S3 external location has been tested with a small probe file only. The Glue job on AWS and the Airflow DAG have not run against real services yet.
+- dbt has run against Databricks only from a laptop, on 3 replayed days through the Volume. The Glue job has run only in the local Glue 5 container against S3, with bookmarks off, because managed Glue is blocked by the AWS Free account plan (`CreateJob` is denied until the plan is upgraded). Job bookmarks and the Airflow DAG have not run against real services yet.
 - It is not yet confirmed that Free Edition can run the job's serverless dbt task. If it cannot, run dbt from the Airflow container against the SQL warehouse instead.
 - An orphan fact keeps the unknown client even if the parent application arrives in a later delivery. Range slicing makes this rare, but nothing re-points those rows.
 - The local Glue image ships Spark 3.5.2 while Glue 5.1 runs Spark 3.5.6; the tests do not depend on the difference.

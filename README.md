@@ -4,6 +4,13 @@ A credit risk lakehouse on the Kaggle [Home Credit Default Risk](https://www.kag
 
 **What this is:** a learning project built to practice Spark, incremental loading and dimensional modeling on Databricks. The data is a public dataset, the daily arrivals are simulated by a replayer script, and it is not production software. Where something has not been run end to end yet, this README says so.
 
+## At a glance
+
+- **Galaxy schema:** 7 incremental fact tables, each merged on its grain key, sharing 4 dimensions (`dim_client` and `dim_contract_type` are conformed): `fact_loan_application`, `fact_bureau_credit`, `fact_bureau_balance_monthly`, `fact_previous_application`, `fact_installment_payment`, `fact_pos_cash_monthly`, `fact_credit_card_monthly`. See [dbt: staging, SCD2, galaxy schema](#dbt-staging-scd2-galaxy-schema).
+- **SCD Type 2:** `snap_client`, a dbt snapshot (check strategy on 8 client attributes). After 3 replayed days it holds 6,050 rows, 50 of them closed versions.
+- **Tests:** 93 dbt data tests (90 generic, 3 singular), all passing in the Databricks job run of 2026-10-20 (`PASS=119`, which is 93 tests, 25 models and 1 snapshot). Python tests cover the replayer, the Glue transforms on Spark and the Airflow helpers, and CI runs ruff, pytest and `dbt parse` on every push. See [Testing](#testing).
+- **Not run yet:** managed Glue (blocked by the AWS Free account plan) and the Airflow DAG against real services. See [Known limitations](#known-limitations).
+
 ## Architecture
 
 ```mermaid

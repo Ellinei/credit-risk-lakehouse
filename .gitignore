@@ -55,3 +55,6 @@ airflow/plugins/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Personal working notes, kept out of the public repo
+CLAUDE.md

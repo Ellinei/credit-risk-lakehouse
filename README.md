@@ -156,7 +156,6 @@ Trigger with `reprocess=true` to rebuild one day, or `land_slice=false` when the
 
 | Date | Decision | Why |
 |---|---|---|
-| 2026-10-15 | No Snowflake | Not used by any target employer, and the trial expired |
 | 2026-10-15 | Glue stops at silver; modeling moved to dbt | One owner per responsibility; no duplicated Spark work |
 | 2026-10-15 | Glue 5.1 (Spark 3.5.6) | AWS default version at the time; Glue 6.0 was too new |
 | 2026-10-15 | Airflow 3 | Scheduler-managed backfills; the ecommerce repo already shows Airflow 2 |

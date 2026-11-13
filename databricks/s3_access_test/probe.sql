@@ -1,5 +1,5 @@
 -- Free Edition S3 access test. Run each block in the SQL editor and note the result
--- in README.md ("Record the result"). Replace <BUCKET> before running.
+-- in README.md in this folder ("Record the result"). Replace <BUCKET> before running.
 
 -- Step 0: can Free Edition create its own catalog?
 -- If this fails, use the built-in `workspace` catalog everywhere (dbt var `catalog`,

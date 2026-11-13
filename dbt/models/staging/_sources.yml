@@ -70,4 +70,4 @@ sources:
         description: >
           No natural key. Glue's record_hash (SHA-256 of all business columns) is the
           key, so rows that are identical in every column collapse into one. Documented
-          as a deliberate policy in the README.
+          as a deliberate policy in docs/design-decisions.md.

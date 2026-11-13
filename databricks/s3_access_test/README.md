@@ -74,7 +74,7 @@ Run the Volume block of `probe.sql` after uploading `bureau.csv` to the Volume i
 
 ## Record the result
 
-Fill this in, set `SILVER_ACCESS_MODE` in `.env`, and copy the outcome into the main README under "Decision log".
+Fill this in, set `SILVER_ACCESS_MODE` in `.env`, and copy the outcome into the decision log in `docs/design-decisions.md`.
 
 ```
 Date tested: 2026-10-20

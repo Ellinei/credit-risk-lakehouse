@@ -1,7 +1,7 @@
 {#
     Orphaned foreign keys: child rows whose parent does not exist.
 
-    Policy (also in the README):
+    Policy (also in docs/design-decisions.md, Data quality):
     - Orphans are kept, not dropped. Their facts point at the unknown client member
       (client_sk = '-1'), so totals still add up and nothing disappears silently.
     - This report counts them per relationship on every run, over all loaded rows and
